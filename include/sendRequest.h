@@ -5,6 +5,6 @@
 #include "common.h"
 
 int handlePolling(int FD, struct pollfd *FDS);
-int sendProbe(char *IP[], int port, int numOfPorts);
+int sendProbe(char *target, int port, int numOfPorts);
 
 #endif

@@ -18,17 +18,19 @@ const char *StateToString(portStates s){
         case OPEN: return "OPEN";
         case CLOSED: return "CLOSED";
         case FILTERED: return "FILTERED";
+        default: return "UNKNOWN";
     }
 }
 
 void printResult(int MAX, results *result){
 
-    for(int i = 1; i < MAX; i++){
-        printf("PORT %d: %s\n", result->port, StateToString(result->state));
+    for(int i = 0; i < MAX; i++){
+        int index = i + 1;
+        printf("PORT %d: %s\n", result[i].port, StateToString(result[i].state));
     }
 }
 
-int checkStatus(int status, int port, results result[]){
+int checkStatus(int status, int port, results result[], int pos){
 
         switch(status){
             
@@ -37,22 +39,22 @@ int checkStatus(int status, int port, results result[]){
                 return ERROR;
 
             case OPEN:
-                result->port = port;
-                result->state = OPEN;
+                result[pos].port = port;
+                result[pos].state = OPEN;
 
                 printf("Port %d: OPEN\n", port);
-                return 0;
+                break;
                 
             case FILTERED:
-                result->port = port;
-                result->state = FILTERED;
+                result[pos].port = port;
+                result[pos].state = FILTERED;
 
                 printf("Port %d: FILTERED\n", port);
-                return 0;   
+                break;
             
         }
 
-    return -1;
+    return 0;
 }
 
 
@@ -63,8 +65,10 @@ int main(int argc, char *argv[]){
     bool set = true;
     int ch;
     int port = 0;
+    int portCount = 0;
     char *target = NULL;
     char *filepath = NULL;
+
 
 
     if(argc < 2){
@@ -109,34 +113,40 @@ int main(int argc, char *argv[]){
 
 
     if(!common && !range){
-        results *result[1];
+        results result[1];
 
-        int status = sendProbe(&target, port, 1);
-        checkStatus(status, port, &result);
+        int status = sendProbe(target, port, 1);
+        checkStatus(status, port, result, 0);
 
-        printResult(1, &result);
+        printResult(1, result);
 
 
         return 0;
     }
 
+    results result[MAX_WELL_KNOWN_PORTS];
+    memset(&result, 0, sizeof(result));
     
     while(set){
-        results *result[MAX_WELL_KNOWN_PORTS - 1];
         
-        for(int i = 1; i < MAX_WELL_KNOWN_PORTS; i++){
-            int status = sendProbe(&target, i, MAX_WELL_KNOWN_PORTS - 1);
+        for(int i = 0; i < MAX_WELL_KNOWN_PORTS; i++){
+            int port = i + 1;
+            int status = sendProbe(target, port, MAX_WELL_KNOWN_PORTS - 1);
             
             if(status == ERROR){
                 printf("ERROR");
             }
 
-            checkStatus(status, i, &result);
+            int check = checkStatus(status, port, result, i);
+
+            if(check == FILTERED || OPEN){
+                portCount++;
+            }
         }
-        printResult(MAX_WELL_KNOWN_PORTS, &result);
-
+        set = false;
     }
-
+    
+    printResult(portCount, result);
     return 0;
     
 }

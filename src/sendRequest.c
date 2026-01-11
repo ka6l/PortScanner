@@ -19,13 +19,13 @@
 */
 
 
-int sendProbe(char *IP[], int port, int numOfPorts){
+int sendProbe(char *target, int port, int numOfPorts){
 
     int MAX = 5;
     int optVal = 1;
 
     struct sockaddr_in info;
-    struct pollfd FDS[1]; // Calculate the range to get the actually number going to be used 
+    struct pollfd FDS[numOfPorts]; // Calculate the range to get the actually number going to be used 
 
     
     //Clear structure
@@ -33,7 +33,7 @@ int sendProbe(char *IP[], int port, int numOfPorts){
 
     info.sin_port = htons(port);
     info.sin_family = AF_INET;
-    info.sin_addr.s_addr = inet_addr(*IP);
+    info.sin_addr.s_addr = inet_addr(target);
 
     int FD = socket(PF_INET, SOCK_STREAM, 0);
 
@@ -58,6 +58,7 @@ int sendProbe(char *IP[], int port, int numOfPorts){
 
     if(connectFd == 0){
         // printf("First connect... Port open\n");
+        close(FD);
         return OPEN;
     }
 
@@ -66,6 +67,7 @@ int sendProbe(char *IP[], int port, int numOfPorts){
         int NFDS = poll(FDS, 1, 1000);
         if(NFDS == 0){
             // printf("POLL FILTERED");
+            close(FD);
             return FILTERED;
         }
 
@@ -81,15 +83,18 @@ int sendProbe(char *IP[], int port, int numOfPorts){
 
             if(optVal == 0){
                 // printf("Second check... port open");
+                close(FD);
                 return OPEN;
             }
             else if(optVal == ECONNREFUSED){
                 // printf("Second check... port closed");
+                close(FD);
                 return CLOSED;
                 
             }
             else{
                 // printf("Filtered");
+                close(FD);
                 return FILTERED;
             }
 
