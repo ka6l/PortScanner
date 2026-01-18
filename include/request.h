@@ -1,5 +1,5 @@
-#ifndef SEND_REQUEST
-#define SEND_REQUEST
+#ifndef REQUEST
+#define REQUEST
 
 #include <poll.h>
 #include "common.h"

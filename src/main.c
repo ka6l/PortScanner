@@ -4,9 +4,11 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include "../include/files.h"
 #include "../include/common.h"
-#include "../include/sendRequest.h"
+#include "../include/request.h"
 
+results result[1]; //Declare then resize with realloc
 
 void usage(){
     printf("Usage:\n");
@@ -22,6 +24,7 @@ const char *StateToString(portStates s){
     }
 }
 
+
 void printResult(int MAX, results *result){
 
     for(int i = 0; i < MAX; i++){
@@ -30,42 +33,19 @@ void printResult(int MAX, results *result){
     }
 }
 
-int checkStatus(int status, int port, results result[], int pos){
 
-        switch(status){
-            
-            case -1:
-                printf("ERROR\n");
-                return ERROR;
-
-            case OPEN:
-                result[pos].port = port;
-                result[pos].state = OPEN;
-
-                printf("Port %d: OPEN\n", port);
-                break;
-                
-            case FILTERED:
-                result[pos].port = port;
-                result[pos].state = FILTERED;
-
-                printf("Port %d: FILTERED\n", port);
-                break;
-            
-        }
-
-    return 0;
-}
 
 
 int main(int argc, char *argv[]){
 
+    bool set = false;
     bool range = false; 
     bool common = false;
-    bool set = true;
     int ch;
+    int start;
+    int end;
     int port = 0;
-    int portCount = 0;
+    int entries = 0;
     char *target = NULL;
     char *filepath = NULL;
 
@@ -76,7 +56,7 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    while((ch = getopt(argc, argv, "p:ct:") )!= -1){
+    while((ch = getopt(argc, argv, "p:ct:s:") )!= -1){
         
         switch(ch){
 
@@ -96,7 +76,17 @@ int main(int argc, char *argv[]){
 
             case 'c':
                 common = true;
+                set = true;
                 break;
+            
+            case 's':
+                filepath = optarg;
+                break;
+            
+            case 'r':
+                range = true;
+                break;
+                // Figure out how to find range
 
             case '?':
                 usage();
@@ -108,45 +98,48 @@ int main(int argc, char *argv[]){
         }
     }
 
-
-
-
-
+    
     if(!common && !range){
-        results result[1];
 
         int status = sendProbe(target, port, 1);
         checkStatus(status, port, result, 0);
 
-        printResult(1, result);
-
-
-        return 0;
+        // printResult(1, result);
+        entries++;
     }
 
-    results result[MAX_WELL_KNOWN_PORTS];
-    memset(&result, 0, sizeof(result));
+    // results result[MAX_WELL_KNOWN_PORTS];
+    // memset(&result, 0, sizeof(result));
     
-    while(set){
+    // while(set){
         
-        for(int i = 0; i < MAX_WELL_KNOWN_PORTS; i++){
-            int port = i + 1;
-            int status = sendProbe(target, port, MAX_WELL_KNOWN_PORTS - 1);
+    //     for(int i = 0; i < MAX_WELL_KNOWN_PORTS; i++){
+    //         int port = i + 1;
+    //         int status = sendProbe(target, port, MAX_WELL_KNOWN_PORTS - 1);
             
-            if(status == ERROR){
-                printf("ERROR");
-            }
+    //         if(status == ERROR){
+    //             printf("ERROR");
+    //         }
 
-            int check = checkStatus(status, port, result, i);
-
-            if(check == FILTERED || OPEN){
-                portCount++;
-            }
-        }
-        set = false;
-    }
+    //         if(checkStatus(status, port, result, i) == FILTERED || OPEN){
+    //             entries++;
+    //         }
+    //     }
+    //     set = false;
+    // }
     
-    printResult(portCount, result);
+    if(filepath != NULL){
+
+        if(createFile(filepath) == ERROR){
+            return ERROR;
+        }
+
+        if(appendFile(result, entries, filepath) == -1){
+            return ERROR;
+        }
+    }
+
+    // printResult(entries, result);
     return 0;
     
 }

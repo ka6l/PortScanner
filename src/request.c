@@ -18,6 +18,33 @@
 
 */
 
+int checkStatus(int status, int port, results result[], int pos){
+
+        switch(status){
+            
+            case -1:
+                printf("ERROR\n");
+                return ERROR;
+
+            case OPEN:
+                result[pos].port = port;
+                result[pos].state = OPEN;
+
+                printf("Port %d: OPEN\n", port);
+                break;
+                
+            case FILTERED:
+                result[pos].port = port;
+                result[pos].state = FILTERED;
+
+                printf("Port %d: FILTERED\n", port);
+                break;
+            
+        }
+
+    return 0;
+}
+
 
 int sendProbe(char *target, int port, int numOfPorts){
 
