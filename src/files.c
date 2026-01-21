@@ -47,12 +47,16 @@ int appendFile(const results *result, int entries, const char *filepath) {
         switch(state){
             case OPEN:
                 stateStr = "OPEN";
+                break;
             case CLOSED:
                 stateStr = "CLOSED";
+                break;
             case FILTERED:
                 stateStr = "FILTERED";
+                break;
             default:
                 stateStr = "UNKNOWN";
+                break;
         }
 
         int len = snprintf(buf, sizeof(buf), "PORT %d %s\n", result[i].port, stateStr);
