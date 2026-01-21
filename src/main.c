@@ -8,7 +8,7 @@
 #include "../include/common.h"
 #include "../include/request.h"
 
-results result[1]; //Declare then resize with realloc
+results *result = NULL;
 
 void usage(){
     printf("Usage:\n");
@@ -38,9 +38,8 @@ void printResult(int MAX, results *result){
 
 int main(int argc, char *argv[]){
 
-    bool set = false;
     bool range = false; 
-    bool common = false;
+    bool commonPorts = false;
     int ch;
     int start;
     int end;
@@ -75,8 +74,7 @@ int main(int argc, char *argv[]){
                 break;
 
             case 'c':
-                common = true;
-                set = true;
+                commonPorts = true;
                 break;
             
             case 's':
@@ -98,35 +96,56 @@ int main(int argc, char *argv[]){
         }
     }
 
+    if(port != 0 && commonPorts){
+        printf("Can't have common ports and single port flagged");
+        return ERROR;
+    }
     
-    if(!common && !range){
+    result = malloc(sizeof *result * MAX_WELL_KNOWN_PORTS);
+    if (!result) {
+        perror("malloc");
+        return ERROR;
+    }
 
-        int status = sendProbe(target, port, 1);
-        checkStatus(status, port, result, 0);
+    memset(result, 0, sizeof *result * MAX_WELL_KNOWN_PORTS);
 
-        // printResult(1, result);
+
+    if(port > 0){
+
+        int request = sendProbe(target, port, 1);
+        if(request == ERROR){
+            return ERROR;
+        }
+
+        result[0].port = port;
+        result[0].state = request;
         entries++;
     }
 
-    // results result[MAX_WELL_KNOWN_PORTS];
-    // memset(&result, 0, sizeof(result));
     
-    // while(set){
-        
-    //     for(int i = 0; i < MAX_WELL_KNOWN_PORTS; i++){
-    //         int port = i + 1;
-    //         int status = sendProbe(target, port, MAX_WELL_KNOWN_PORTS - 1);
-            
-    //         if(status == ERROR){
-    //             printf("ERROR");
-    //         }
+    if(commonPorts){
+        entries = 0;
 
-    //         if(checkStatus(status, port, result, i) == FILTERED || OPEN){
-    //             entries++;
-    //         }
-    //     }
-    //     set = false;
-    // }
+        
+        for(int i = 0; i < MAX_WELL_KNOWN_PORTS; i++){
+            int port = i + 1;
+            int request = sendProbe(target, port, MAX_WELL_KNOWN_PORTS - 1);
+            
+            if(request == ERROR){
+                printf("ERROR");
+                return ERROR;
+            }
+
+            if(request == FILTERED || request == OPEN){
+
+                result[entries].port = port;
+                result[entries].state = request;
+                
+                entries++;
+            }
+        }
+    }
+
     
     if(filepath != NULL){
 
@@ -139,7 +158,7 @@ int main(int argc, char *argv[]){
         }
     }
 
-    // printResult(entries, result);
+    free(result);
     return 0;
     
 }
