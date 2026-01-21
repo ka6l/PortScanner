@@ -12,11 +12,6 @@
 
 #include "../include/common.h"
 
-/*
-    Loop through common most ports
-    Store Results
-
-*/
 
 int checkStatus(int status, int port, results result[], int pos){
 
@@ -30,29 +25,29 @@ int checkStatus(int status, int port, results result[], int pos){
                 result[pos].port = port;
                 result[pos].state = OPEN;
 
-                printf("Port %d: OPEN\n", port);
-                break;
-                
+                return 1;  
+
             case FILTERED:
                 result[pos].port = port;
                 result[pos].state = FILTERED;
+                
+                return 1;
 
-                printf("Port %d: FILTERED\n", port);
+            case CLOSED:
                 break;
             
         }
 
-    return 0;
+    return ERROR;
 }
 
 
 int sendProbe(char *target, int port, int numOfPorts){
 
-    int MAX = 5;
     int optVal = 1;
 
     struct sockaddr_in info;
-    struct pollfd FDS[numOfPorts]; // Calculate the range to get the actually number going to be used 
+    struct pollfd FDS; // Calculate the range to get the actually number going to be used 
 
     
     //Clear structure
@@ -66,7 +61,7 @@ int sendProbe(char *target, int port, int numOfPorts){
 
     if(FD == -1){
         perror("Socket");
-        return -1;
+        return ERROR;
     }
 
     //Sets to non blocking
@@ -74,9 +69,9 @@ int sendProbe(char *target, int port, int numOfPorts){
     fcntl(FD, F_SETFL, flags | O_NONBLOCK);
 
 
-    memset(FDS, 0, sizeof(FDS));
-    FDS[0].fd = FD;
-    FDS[0].events = POLLOUT;
+    memset(&FDS, 0, sizeof(FDS));
+    FDS.fd = FD;
+    FDS.events = POLLOUT;
 
 
     
@@ -91,7 +86,7 @@ int sendProbe(char *target, int port, int numOfPorts){
 
     else if(connectFd == -1 && errno == EINPROGRESS){
 
-        int NFDS = poll(FDS, 1, 1000);
+        int NFDS = poll(&FDS, 1, 1000);
         if(NFDS == 0){
             // printf("POLL FILTERED");
             close(FD);
@@ -99,12 +94,13 @@ int sendProbe(char *target, int port, int numOfPorts){
         }
 
  
-        else if(NFDS > 0 && FDS[0].revents & (POLLOUT | POLLERR | POLLHUP)){
+        else if(NFDS > 0 && FDS.revents & (POLLOUT | POLLERR | POLLHUP)){
             socklen_t optLen = sizeof(optVal);
 
 
             if(getsockopt(FD, SOL_SOCKET, SO_ERROR, &optVal, &optLen) < 0){
                 perror("GETSOCKOPT");
+                close(FD);
                 return -1;
             }
 
