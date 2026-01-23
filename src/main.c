@@ -12,7 +12,7 @@ results *result = NULL;
 
 void usage(){
     printf("Usage:\n");
-    printf("-p (port) | -t (target)| -c (common ports) | -s (save output)\n");
+    printf("-p (port) | -t (target)| -w (well known ports (non listed ports are to be assumed closed)) | -s (save output)\n");
 }
 
 const char *StateToString(portStates s){
@@ -39,10 +39,11 @@ void printResult(int MAX, results *result){
 int main(int argc, char *argv[]){
 
     bool range = false; 
-    bool commonPorts = false;
+    bool wellKnownPorts = false;
+
     int ch;
-    int start;
-    int end;
+    // int start;
+    // int end;
     int port = 0;
     int entries = 0;
     char *target = NULL;
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    while((ch = getopt(argc, argv, "p:ct:s:") )!= -1){
+    while((ch = getopt(argc, argv, "p:wt:s:") )!= -1){
         
         switch(ch){
 
@@ -73,18 +74,14 @@ int main(int argc, char *argv[]){
 
                 break;
 
-            case 'c':
-                commonPorts = true;
+            case 'w':
+                wellKnownPorts = true;
                 break;
-            
+
             case 's':
                 filepath = optarg;
                 break;
             
-            case 'r':
-                range = true;
-                break;
-                // Figure out how to find range
 
             case '?':
                 usage();
@@ -96,20 +93,26 @@ int main(int argc, char *argv[]){
         }
     }
 
-    if(port != 0 && commonPorts){
+    if(port != 0 && wellKnownPorts ){
         printf("Can't have common ports and single port flagged");
         return ERROR;
     }
     
-    result = malloc(sizeof *result * MAX_WELL_KNOWN_PORTS);
+    if(!target){
+        printf("Missing IP address");
+        return ERROR;
+    }
+
+    result = malloc((sizeof(*result)) * MAX_WELL_KNOWN_PORTS);
     if (!result) {
         perror("malloc");
         return ERROR;
     }
 
-    memset(result, 0, sizeof *result * MAX_WELL_KNOWN_PORTS);
+    memset(result, 0, (sizeof(*result)) * MAX_WELL_KNOWN_PORTS);
 
-
+   
+    
     if(port > 0){
 
         int request = sendProbe(target, port, 1);
@@ -123,13 +126,12 @@ int main(int argc, char *argv[]){
     }
 
     
-    if(commonPorts){
+    if(wellKnownPorts){
         entries = 0;
-
         
         for(int i = 0; i < MAX_WELL_KNOWN_PORTS; i++){
             int port = i + 1;
-            int request = sendProbe(target, port, MAX_WELL_KNOWN_PORTS - 1);
+            int request = sendProbe(target, port, MAX_WELL_KNOWN_PORTS);
             
             if(request == ERROR){
                 printf("ERROR");
